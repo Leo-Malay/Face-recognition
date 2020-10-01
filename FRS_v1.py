@@ -53,22 +53,48 @@ class leo_frs:
         self.name_ls = self.name_ls.tolist()
 
     def __get_faces(self, img):
-        self.faces = self.face.detectMultiScale(img, 1.7, 2)
+        self.faces = self.face.detectMultiScale(img, 1.1, 5)
 
     def __draw_rect(self, x, y, w, h):
         self.frame = cv2.rectangle(
-            self.frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+            self.frame, (x, y), (x+w, y+h), (0,255, 0), 2)
 
     def __put_text(self, label, confidence, x, y):
         # This function is used to put text over the box.
-        cv2.putText(self.frame, f"{self.name_ls[label]} - {round(100 *(1-(confidence/self.max_confi)),2)}",
-                    (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
+        cv2.putText(self.frame, f"{self.name_ls[label]} - {round((100 - confidence),2)}%",
+                    (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0,255,0), 2)
+
+    def __put_count_down(self, number):
+        # This function is used for captureing the frame.
+        cv2.putText(self.frame, f"{50-number}",
+                    (10,40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4)
 
     def __get_num_dir(self, path):
         # This function calculates number of folders.
         self.num_dir = 0
         for _, dirnames, filenames in os.walk(path):
             self.num_dir += len(dirnames)
+
+    def import_img(self,path,name):
+        self.__get_files(path)
+        self.__create_dir("data/raw_data/"+name)
+        num_photo = 0
+        for file in self.file_ls:
+            self.__get_faces(file)
+            if len(self.faces) != 0:
+                if len(self.faces) == 1:
+                    for face in self.faces:
+                        (x, y, w, h) = face
+                        file = file[y:y+h, x:x+w]
+                        print(
+                            f"[SUCCESS] Photo imported: {num_photo}")
+                        cv2.imwrite(
+                            f"./data/raw_data/{name}/frame[{num_photo}].jpeg", file)
+                        num_photo +=1
+                else:
+                    print("[ERROR]: Photo got more than one face.")
+            else:
+                print(f"[ERROR]: Photo got no face")           
 
     def capture_start(self, num, name):
         # This function is used for capturing the raw frames.
@@ -80,26 +106,21 @@ class leo_frs:
             ret, self.frame = self.video.read()
             if ret == True:
                 self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-                try:
-                    self.__get_faces(self.gray)
-                    if len(self.faces) != 0:
-                        try:
-                            for face in self.faces:
-                                (x, y, w, h) = face
-                            self.__draw_rect(x, y, w, h)
-                            if frame_count % 3 == 0:
-                                self.gray = self.gray[y:y+h, x:x+w]
-                                print(
-                                    f"[SUCCESS] Frame captured: {int(frame_count/3)}")
-                                cv2.imwrite(
-                                    f"{path_save}/frame[{int(frame_count/3)}].jpeg", self.gray)
-                            elif frame_count >= 150:
-                                break
-                            frame_count += 1
-                        except:
-                            print("[LOG]: No Face.")
-                except:
-                    print("[LOG]: No Face.")
+                self.__get_faces(self.gray)
+                if len(self.faces) != 0:
+                    for face in self.faces:
+                        (x, y, w, h) = face
+                        self.__draw_rect(x, y, w, h)
+                    if frame_count % 3 == 0:
+                        self.gray = self.gray[y:y+h, x:x+w]
+                        print(
+                            f"[SUCCESS] Frame captured: {int(frame_count/3)}")
+                        self.__put_count_down(int(frame_count/3))
+                        cv2.imwrite(
+                            f"{path_save}/frame[{int(frame_count/3)}].jpeg", self.gray)
+                    if frame_count >= 150:
+                        break
+                    frame_count += 1
                 cv2.imshow("Live Cam For Capture", self.frame)
                 if cv2.waitKey(1) == ord("q"):
                     break
@@ -131,7 +152,6 @@ class leo_frs:
         while (True):
             ret, self.frame = self.video.read()
             if ret == True:
-                self.frame = cv2.resize(self.frame, (960, 540))
                 try:
                     self.__get_faces(self.frame)
                     if len(self.faces) != 0:
@@ -139,18 +159,14 @@ class leo_frs:
                             (x, y, w, h) = face
                             self.__draw_rect(x, y, w, h)
                             gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-                            try:
-                                label, confidence = self.face_identify.predict(
-                                    gray[y:y+h, x:x+w])
-                                if self.max_confi < confidence:
-                                    self.max_confi = confidence
-                                if confidence <= 100:
-                                    self.__put_text(label, confidence, x, y)
-                            except:
-                                print("[LOG]: No Face!")
+                            label, confidence = self.face_identify.predict(
+                                gray[y:y+h, x:x+w])
+                            if confidence <= 100:
+                                self.__put_text(label, confidence, x, y)
+                            print(f"Confidence: {confidence}")
                 except:
                     print("[LOG]: No face")
-                cv2.imshow("Identify me!", self.frame)
+                cv2.imshow("Identify me! ( Q to exit )", self.frame)
                 if cv2.waitKey(1) == ord("q"):
                     break
         self.video.release()
@@ -159,13 +175,16 @@ class leo_frs:
 
 
 ### Test ###
-pt = leo_frs()
+#pt = leo_frs()
 
 # Uncomment the following code and run multiple times with multiple people.(one people one time)
-pt.capture_start(0, "Malay")
+#pt.capture_start(0, "xyz")
+
+# Uncomment the following code give path and name of the person to import its image.
+#pt.import_img("./path","Enter name")
 
 # Uncomment the following code after you capturing some peoples photo.
-pt.train()
+#pt.train()
 
 # Uncomment the following code after training.(Comment both of above line)
-pt.predict(0)
+#pt.predict(0)
