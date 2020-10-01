@@ -1,1 +1,7 @@
+This function contains the Cascade file for the face detection.
 
+Can download from Github: opencv/opencv/data/haarcascades
+
+Used under: Intel License Agreement For Open Source Computer Vision Library
+
+@Author: Malay Bhavsar
