@@ -1,11 +1,12 @@
 # This file is for Face Recognition System.
-# Version: 1.0
+# Version: 2.0
 # @Author: Malay Bhavsar
 
 # Importing the modules.
-import os
+from os import path, makedirs, walk
 import cv2
-import numpy as np
+from numpy import array, shape
+from sys import stdout
 
 # Creating the class.
 
@@ -21,35 +22,34 @@ class leo_frs:
 
     def __create_dir(self, name):
         # This function is used to create folder.
-        if os.path.exists(f"{self.path}/{name}"):
+        if path.exists(f"{self.path}/{name}"):
             print("[LOG]: Folder Already Exists")
         else:
-            os.makedirs(f"{self.path}/{name}")
+            makedirs(f"{self.path}/{name}")
             print(f"[LOG]: Folder named:'{name}' Created @ path:'{self.path}'")
 
     def __get_files(self, path):
         # This function returns the files in that path except for system files.
-        for root, subdir, files in os.walk(path):
+        for root, subdir, files in walk(path):
             for subd in subdir:
                 if len(subd) != 0:
                     self.name_ls.append(subd)
             print(f"[LOG]: Reading File: {root}/{subdir}")
             for file_name in files:
-                if file_name[0] == ".":
-                    pass
-                self.name_ls.append(os.path.basename(root))
-                img = cv2.imread("/".join([root, file_name]))
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                self.file_ls.append(gray)
-        self.name_ls = np.array(self.name_ls).ravel()
+                if file_name[0] != ".":
+                    self.name_ls.append(path.basename(root))
+                    img = cv2.imread("/".join([root, file_name]))
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    self.file_ls.append(gray)
+        self.name_ls = array(self.name_ls).ravel()
         self.name_ls = self.name_ls.tolist()
 
     def __get_name_ls(self, path):
-        for root, subdir, files in os.walk(path):
+        for root, subdir, files in walk(path):
             for subd in subdir:
                 if len(subd) != 0:
                     self.name_ls.append(subd)
-        self.name_ls = np.array(self.name_ls).ravel()
+        self.name_ls = array(self.name_ls).ravel()
         self.name_ls = self.name_ls.tolist()
 
     def __get_faces(self, img):
@@ -57,25 +57,25 @@ class leo_frs:
 
     def __draw_rect(self, x, y, w, h):
         self.frame = cv2.rectangle(
-            self.frame, (x, y), (x+w, y+h), (0,255, 0), 2)
+            self.frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
     def __put_text(self, label, confidence, x, y):
         # This function is used to put text over the box.
         cv2.putText(self.frame, f"{self.name_ls[label]} - {round((100 - confidence),2)}%",
-                    (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0,255,0), 2)
+                    (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def __put_count_down(self, number):
         # This function is used for captureing the frame.
         cv2.putText(self.frame, f"{50-number}",
-                    (10,40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4)
+                    (10, 40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4)
 
     def __get_num_dir(self, path):
         # This function calculates number of folders.
         self.num_dir = 0
-        for _, dirnames, filenames in os.walk(path):
+        for _, dirnames, filenames in walk(path):
             self.num_dir += len(dirnames)
 
-    def import_img(self,path,name):
+    def import_img(self, path, name):
         self.__get_files(path)
         self.__create_dir("data/raw_data/"+name)
         num_photo = 0
@@ -90,11 +90,11 @@ class leo_frs:
                             f"[SUCCESS] Photo imported: {num_photo}")
                         cv2.imwrite(
                             f"./data/raw_data/{name}/frame[{num_photo}].jpeg", file)
-                        num_photo +=1
+                        num_photo += 1
                 else:
                     print("[ERROR]: Photo got more than one face.")
             else:
-                print(f"[ERROR]: Photo got no face")           
+                print(f"[ERROR]: Photo got no face")
 
     def capture_start(self, num, name):
         # This function is used for capturing the raw frames.
@@ -102,9 +102,9 @@ class leo_frs:
         path_save = f"data/raw_data/{name.lower()}"
         self.__create_dir(path_save)
         frame_count = 0
-        while (True):
+        while 1:
             ret, self.frame = self.video.read()
-            if ret == True:
+            if ret == True and shape(self.frame) != ():
                 self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
                 self.__get_faces(self.gray)
                 if len(self.faces) != 0:
@@ -135,7 +135,7 @@ class leo_frs:
             label.append(self.name_ls.index(name))
         print("[LOG]: Training Started")
         self.face_identify = cv2.face.LBPHFaceRecognizer_create()
-        self.face_identify.train(self.file_ls, np.array(label[self.num_dir:]))
+        self.face_identify.train(self.file_ls, array(label[self.num_dir:]))
         print("[LOG]: Writing output file")
         self.face_identify.write("./data/data.yml")
         print("[SUCCESS]: Model trained")
@@ -151,7 +151,7 @@ class leo_frs:
         print("[LOG]: Starting the camera output")
         while (True):
             ret, self.frame = self.video.read()
-            if ret == True:
+            if ret == True and shape(self.frame) != ():
                 try:
                     self.__get_faces(self.frame)
                     if len(self.faces) != 0:
@@ -163,7 +163,6 @@ class leo_frs:
                                 gray[y:y+h, x:x+w])
                             if confidence <= 100:
                                 self.__put_text(label, confidence, x, y)
-                            print(f"Confidence: {confidence}")
                 except:
                     print("[LOG]: No face")
                 cv2.imshow("Identify me! ( Q to exit )", self.frame)
@@ -184,7 +183,7 @@ class leo_frs:
 #pt.import_img("./path","Enter name")
 
 # Uncomment the following code after you capturing some peoples photo.
-#pt.train()
+# pt.train()
 
 # Uncomment the following code after training.(Comment both of above line)
-#pt.predict(0)
+# pt.predict(0)
