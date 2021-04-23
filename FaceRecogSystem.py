@@ -23,18 +23,19 @@ class leo_frs:
     def __create_dir(self, name):
         # This function is used to create folder.
         if path.exists(f"{self.path}/{name}"):
-            print("[LOG]: Folder Already Exists")
+            stdout.write("[LOG]: Folder Already Exists\n")
         else:
             makedirs(f"{self.path}/{name}")
-            print(f"[LOG]: Folder named:'{name}' Created @ path:'{self.path}'")
+            stdout.write(
+                f"[LOG]: Folder named:'{name}' Created @ path:'{self.path}'\n")
 
-    def __get_files(self, path):
+    def __get_files(self, paths):
         # This function returns the files in that path except for system files.
-        for root, subdir, files in walk(path):
+        for root, subdir, files in walk(paths):
             for subd in subdir:
                 if len(subd) != 0:
                     self.name_ls.append(subd)
-            print(f"[LOG]: Reading File: {root}/{subdir}")
+            stdout.write(f"[LOG]: Reading File: {root}/{subdir}\n")
             for file_name in files:
                 if file_name[0] != ".":
                     self.name_ls.append(path.basename(root))
@@ -86,15 +87,15 @@ class leo_frs:
                     for face in self.faces:
                         (x, y, w, h) = face
                         file = file[y:y+h, x:x+w]
-                        print(
-                            f"[SUCCESS] Photo imported: {num_photo}")
+                        stdout.write(
+                            "[SUCCESS] Photo imported: " + str(num_photo) + "\n")
                         cv2.imwrite(
                             f"./data/raw_data/{name}/frame[{num_photo}].jpeg", file)
                         num_photo += 1
                 else:
-                    print("[ERROR]: Photo got more than one face.")
+                    stdout.write("[ERROR]: Photo got more than one face.\n")
             else:
-                print(f"[ERROR]: Photo got no face")
+                stdout.write("[ERROR]: Photo got no face\n")
 
     def capture_start(self, num, name):
         # This function is used for capturing the raw frames.
@@ -113,8 +114,8 @@ class leo_frs:
                         self.__draw_rect(x, y, w, h)
                     if frame_count % 3 == 0:
                         self.gray = self.gray[y:y+h, x:x+w]
-                        print(
-                            f"[SUCCESS] Frame captured: {int(frame_count/3)}")
+                        stdout.write(
+                            "[SUCCESS] Frame captured: " + str(int(frame_count/3)) + "\n")
                         self.__put_count_down(int(frame_count/3))
                         cv2.imwrite(
                             f"{path_save}/frame[{int(frame_count/3)}].jpeg", self.gray)
@@ -133,22 +134,22 @@ class leo_frs:
         label = []
         for name in self.name_ls:
             label.append(self.name_ls.index(name))
-        print("[LOG]: Training Started")
+        stdout.write("[LOG]: Training Started\n")
         self.face_identify = cv2.face.LBPHFaceRecognizer_create()
         self.face_identify.train(self.file_ls, array(label[self.num_dir:]))
-        print("[LOG]: Writing output file")
+        stdout.write("[LOG]: Writing output file\n")
         self.face_identify.write("./data/data.yml")
-        print("[SUCCESS]: Model trained")
+        stdout.write("[SUCCESS]: Model trained\n")
 
     def predict(self, num):
         # This function is used for predicting the faces.
         self.__get_name_ls("./data/raw_data")
         self.face_identify = cv2.face.LBPHFaceRecognizer_create()
-        print("[LOG]: Loading the trained data")
+        stdout.write("[LOG]: Loading the trained data\n")
         self.face_identify.read("./data/data.yml")
-        print("[SUCCESS]: Trained Data loaded")
+        stdout.write("[SUCCESS]: Trained Data loaded\n")
         self.video = cv2.VideoCapture(num)
-        print("[LOG]: Starting the camera output")
+        stdout.write("[LOG]: Starting the camera output\n")
         while (True):
             ret, self.frame = self.video.read()
             if ret == True and shape(self.frame) != ():
@@ -164,26 +165,26 @@ class leo_frs:
                             if confidence <= 100:
                                 self.__put_text(label, confidence, x, y)
                 except:
-                    print("[LOG]: No face")
+                    stdout.write("[LOG]: No face\n")
                 cv2.imshow("Identify me! ( Q to exit )", self.frame)
                 if cv2.waitKey(1) == ord("q"):
                     break
         self.video.release()
         cv2.destroyAllWindows()
-        print("[LOG]: Camera Closed")
+        stdout.write("[LOG]: Camera Closed\n")
 
 
 ### Test ###
-#pt = leo_frs()
+pt = leo_frs()
 
 # Uncomment the following code and run multiple times with multiple people.(one people one time)
 #pt.capture_start(0, "xyz")
 
 # Uncomment the following code give path and name of the person to import its image.
-#pt.import_img("./path","Enter name")
+#pt.import_img("./path", "Enter name")
 
 # Uncomment the following code after you capturing some peoples photo.
-# pt.train()
+pt.train()
 
 # Uncomment the following code after training.(Comment both of above line)
-# pt.predict(0)
+pt.predict(0)
