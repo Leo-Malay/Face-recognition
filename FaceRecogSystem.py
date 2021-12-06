@@ -62,12 +62,18 @@ class leo_frs:
 
     def __put_text(self, label, confidence, x, y):
         # This function is used to put text over the box.
-        cv2.putText(self.frame, f"{self.name_ls[label]} - {round((100 - confidence),2)}%",
-                    (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        if(label == -1):
+            name = "Unknown"
+            cv2.putText(self.frame, f"{name}",
+                        (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        else:
+            name = self.name_ls[label]
+            cv2.putText(self.frame, f"{name} - {round((100 - confidence),2)}%",
+                        (x, y-10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def __put_count_down(self, number):
         # This function is used for captureing the frame.
-        cv2.putText(self.frame, f"{50-number}",
+        cv2.putText(self.frame, f"{200-number}",
                     (10, 40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4)
 
     def __get_num_dir(self, path):
@@ -103,6 +109,8 @@ class leo_frs:
         path_save = f"data/raw_data/{name.lower()}"
         self.__create_dir(path_save)
         frame_count = 0
+        frame_break = 1
+        max_frame_capture = 200
         while 1:
             ret, self.frame = self.video.read()
             if ret == True and shape(self.frame) != ():
@@ -112,14 +120,14 @@ class leo_frs:
                     for face in self.faces:
                         (x, y, w, h) = face
                         self.__draw_rect(x, y, w, h)
-                    if frame_count % 3 == 0:
+                    if frame_count % frame_break == 0:
                         self.gray = self.gray[y:y+h, x:x+w]
                         stdout.write(
-                            "[SUCCESS] Frame captured: " + str(int(frame_count/3)) + "\n")
-                        self.__put_count_down(int(frame_count/3))
+                            "[SUCCESS] Frame captured: " + str(int(frame_count/frame_break)) + "\n")
+                        self.__put_count_down(int(frame_count/frame_break))
                         cv2.imwrite(
-                            f"{path_save}/frame[{int(frame_count/3)}].jpeg", self.gray)
-                    if frame_count >= 150:
+                            f"{path_save}/frame[{int(frame_count/frame_break)}].jpeg", self.gray)
+                    if frame_count >= max_frame_capture:
                         break
                     frame_count += 1
                 cv2.imshow("Live Cam For Capture", self.frame)
@@ -148,8 +156,8 @@ class leo_frs:
         stdout.write("[LOG]: Loading the trained data\n")
         self.face_identify.read("./data/data.yml")
         stdout.write("[SUCCESS]: Trained Data loaded\n")
-        self.video = cv2.VideoCapture(num)
         stdout.write("[LOG]: Starting the camera output\n")
+        self.video = cv2.VideoCapture(num)
         while (True):
             ret, self.frame = self.video.read()
             if ret == True and shape(self.frame) != ():
@@ -162,10 +170,12 @@ class leo_frs:
                             gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
                             label, confidence = self.face_identify.predict(
                                 gray[y:y+h, x:x+w])
-                            if confidence <= 100:
+                            if confidence <= 50:
                                 self.__put_text(label, confidence, x, y)
+                            else:
+                                self.__put_text(-1, confidence, x, y)
                 except:
-                    stdout.write("[LOG]: No face\n")
+                    self.__put_text(-1, confidence, x, y)
                 cv2.imshow("Identify me! ( Q to exit )", self.frame)
                 if cv2.waitKey(1) == ord("q"):
                     break
@@ -178,13 +188,13 @@ class leo_frs:
 pt = leo_frs()
 
 # Uncomment the following code and run multiple times with multiple people.(one people one time)
-#pt.capture_start(0, "xyz")
+#pt.capture_start(0, "Malay")
 
 # Uncomment the following code give path and name of the person to import its image.
 #pt.import_img("./path", "Enter name")
 
 # Uncomment the following code after you capturing some peoples photo.
-pt.train()
+# pt.train()
 
 # Uncomment the following code after training.(Comment both of above line)
 pt.predict(0)
