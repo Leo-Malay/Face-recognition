@@ -1,4 +1,5 @@
 # Face-recognition-system
+
 <h3>By Malay Bhavsar</h3>
 <br>
 Click the following like to see the demo Video
@@ -18,3 +19,11 @@ Click the following like to see the demo Video
     <li>Must have latest python 3.7 Installed with Librarys: opencv, tkinter, os</li>
     <li>Not for Commercial use</li>
 </ul>
+<br/>
+<pre>
+  
+  $> pip install opencv-contrib-python
+  $> pip install numpy
+  $> pip install tkinter
+
+</pre>
